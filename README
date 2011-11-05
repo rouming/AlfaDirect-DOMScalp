@@ -1,5 +1,5 @@
 NAME
-    AlfaDirect-DOMScalp -- Simple scalping software which based on AlfaDirectAPI
+    AlfaDirect-DOMScalp -- Simple Qt scalping software which based on AlfaDirectAPI
     library and consists of a single depth of market window. You can receive DOM
     of some symbol and then trade it with right or left mouse clicks.
 
