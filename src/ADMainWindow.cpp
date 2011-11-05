@@ -121,20 +121,8 @@ void ADMainWindow::onConnectClick ()
     else {
         Ui_ADMainWindow::connectButton->setText("Connecting ...");
         Ui_ADMainWindow::connectButton->setDisabled(true);
-        QFile auth( QCoreApplication::applicationDirPath() + "/ad_auth" );
-        bool res = auth.open( QFile::ReadOnly );
-        if ( ! res ) {
-            Ui_ADMainWindow::connectButton->setText("Connect");
-            Ui_ADMainWindow::connectButton->setDisabled(false);
-            qWarning("can't open auth file!");
-            return;
-        }
 
-        QString login = QString(auth.readLine()).remove( QRegExp("(\\r|\\n)+$") );
-        QString passwd = QString(auth.readLine()).remove( QRegExp("(\\r|\\n)+$") );
-        auth.close();
-
-        m_adConnect.connect( login, passwd );
+        m_adConnect.connect( m_login, m_passwd );
     }
 }
 
