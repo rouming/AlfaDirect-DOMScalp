@@ -1,0 +1,19 @@
+NAME
+    AlfaDirect-DOMScalp -- Simple scalping software which based on AlfaDirectAPI
+    library and consists of a single depth of market window. You can receive DOM
+    of some symbol and then trade it with right or left mouse clicks.
+
+AUTHOR
+    Roman Pen
+
+BUGS
+    This software is a simple example of AlfaDirectAPI functionality, so do not
+    expect too much.
+
+ACKNOWLEDGEMENTS
+COPYRIGHT & LICENSE
+    Copyright 2011 Roman Pen
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either: the GNU General Public License as published
+    by the Free Software Foundation
