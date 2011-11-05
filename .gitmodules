@@ -1,0 +1,3 @@
+[submodule "AlfaDirectAPI"]
+	path = AlfaDirectAPI
+	url = git://github.com/rouming/AlfaDirectAPI.git
