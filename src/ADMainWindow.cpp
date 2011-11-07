@@ -151,10 +151,10 @@ void ADMainWindow::setupViews()
     Ui_ADMainWindow::buyersTableView->setModel(m_buyersTableModel);
 
     Ui_ADMainWindow::sellersTableView->setColumnWidth(0, 40);
-    Ui_ADMainWindow::sellersTableView->setColumnWidth(1, 50);
+    Ui_ADMainWindow::sellersTableView->setColumnWidth(1, 65);
     Ui_ADMainWindow::sellersTableView->setColumnWidth(2, 40);
     Ui_ADMainWindow::buyersTableView->setColumnWidth(0, 40);
-    Ui_ADMainWindow::buyersTableView->setColumnWidth(1, 50);
+    Ui_ADMainWindow::buyersTableView->setColumnWidth(1, 65);
     Ui_ADMainWindow::buyersTableView->setColumnWidth(2, 40);
 }
 
@@ -436,9 +436,6 @@ void ADMainWindow::onQuoteReceived ( int paperNo,
                 Ui_ADMainWindow::sellersTableView->scrollToBottom();
             }
         }
-
-        Ui_ADMainWindow::buyersTableView->resizeColumnsToContents();
-        Ui_ADMainWindow::sellersTableView->resizeColumnsToContents();
 
         QMap<float, int>::Iterator it = q.sellers.begin();
 
