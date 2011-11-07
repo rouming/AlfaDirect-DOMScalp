@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>284</width>
-    <height>711</height>
+    <width>312</width>
+    <height>719</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -149,6 +149,9 @@
             </property>
             <property name="showGrid">
              <bool>true</bool>
+            </property>
+            <property name="wordWrap">
+             <bool>false</bool>
             </property>
             <attribute name="horizontalHeaderVisible">
              <bool>false</bool>
@@ -311,6 +314,9 @@
             <property name="showGrid">
              <bool>true</bool>
             </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
             <attribute name="horizontalHeaderVisible">
              <bool>false</bool>
             </attribute>
@@ -357,6 +363,52 @@
            </spacer>
           </item>
           <item>
+           <widget class="QLabel" name="label_3">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Login</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="loginEdit"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Password</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="passwdEdit">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Slippage </string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QWidget" name="widget_6" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_4">
              <property name="spacing">
@@ -365,18 +417,6 @@
              <property name="margin">
               <number>0</number>
              </property>
-             <item>
-              <widget class="QLabel" name="label_2">
-               <property name="font">
-                <font>
-                 <pointsize>7</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Slippage </string>
-               </property>
-              </widget>
-             </item>
              <item>
               <widget class="QSpinBox" name="betterSpinBox">
                <property name="value">
@@ -541,11 +581,95 @@
            </spacer>
           </item>
           <item>
+           <widget class="QLabel" name="label_5">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Paper</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="widget_7" native="true">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <kerning>false</kerning>
+             </font>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <property name="spacing">
+              <number>6</number>
+             </property>
+             <property name="margin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLineEdit" name="findPaperEdit">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="echoMode">
+                <enum>QLineEdit::Normal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="findPaperButton">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>ok</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="findResultLabel">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLabel" name="label">
             <property name="minimumSize">
              <size>
-              <width>0</width>
-              <height>20</height>
+              <width>70</width>
+              <height>65</height>
              </size>
             </property>
             <property name="text">
@@ -574,7 +698,13 @@
     </item>
     <item>
      <widget class="QWidget" name="widget_4" native="true">
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
         <widget class="QLabel" name="netStatLabel">
          <property name="text">
@@ -589,7 +719,7 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>94</width>
+           <width>193</width>
            <height>20</height>
           </size>
          </property>
@@ -612,8 +742,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>284</width>
-     <height>19</height>
+     <width>312</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>
