@@ -390,10 +390,10 @@ void ADMainWindow::onQuoteReceived ( int paperNo,
         }
 
         if ( min_sellers && max_buyers ) {
-            qWarning("!!!!! MIN SELLERS, MAX BUYERS, now price =%.2f\n", q.lastPrice);
+            //qWarning("!!!!! MIN SELLERS, MAX BUYERS, now price =%.2f\n", q.lastPrice);
         }
         else if ( min_buyers && max_sellers ) {
-            qWarning("!!!!! MIN BUYERS, MAX SELLERS, now price =%.2f\n", q.lastPrice);
+            //qWarning("!!!!! MIN BUYERS, MAX SELLERS, now price =%.2f\n", q.lastPrice);
         }
     }
 }
