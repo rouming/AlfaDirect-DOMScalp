@@ -14,10 +14,7 @@ class ADMainWindow : public QMainWindow, public Ui::ADMainWindow
 {
     Q_OBJECT
 public:
-    ADMainWindow ( const QString& login,
-                   const QString& passwd,
-                   const QString& accCode,
-                   const QString& papCode );
+    ADMainWindow ();
 
 private:
     friend class ADTableView;
@@ -31,6 +28,7 @@ private:
 
 private slots:
     void onConnectClick ();
+    void onFindClick ();
     void onConnectionStateChanged ( ADConnection::State );
     void onQuoteReceived ( int paperNo, ADConnection::Subscription::Type );
     void onHistoricalQuotesReceived ( ADConnection::Request, QVector<ADConnection::HistoricalQuote> );
@@ -49,8 +47,6 @@ private:
     QStandardItemModel* m_buyersTableModel;
     ADConnection m_adConnect;
     ADConnection::Subscription m_sub;
-    QString m_login;
-    QString m_passwd;
     QString m_accCode;
     QString m_papCode;
     int m_papNo;

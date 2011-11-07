@@ -19,14 +19,47 @@
 
 /***************************************************************************************/
 
-ADMainWindow::ADMainWindow ( const QString& login,
-                             const QString& passwd,
-                             const QString& accCode,
-                             const QString& papCode ) :
-    m_login(login),
-    m_passwd(passwd),
-    m_accCode(accCode),
-    m_papCode(papCode),
+namespace XOR
+{
+    bool doXOR ( const QByteArray& in,
+                 QByteArray& out )
+    {
+        if ( in.size() == 0 )
+            return false;
+
+        const int Key = 0xdead666;
+        out.clear();
+        out.resize(in.size());
+        for ( int i = 0; i < in.size(); ++i ) {
+            out[i] = in[i] ^ Key;
+        }
+        return true;
+    }
+
+    /*
+     * Simple XOR plain text masking
+     */
+    QByteArray encrypt ( const QByteArray& in )
+    {
+        QByteArray out;
+        doXOR(in, out);
+        return out;
+    }
+
+    /*
+     * Simple XOR plain text demasking
+     */
+    QByteArray decrypt ( const QByteArray& in )
+    {
+        QByteArray out;
+        doXOR(in, out);
+        return out;
+    }
+}
+
+/***************************************************************************************/
+
+ADMainWindow::ADMainWindow () :
     m_papNo(0),
     m_pos(0)
 {
@@ -36,9 +69,16 @@ ADMainWindow::ADMainWindow ( const QString& login,
 
     statusBar();
 
+    QCoreApplication::setOrganizationName("AlfaDirectDOMScalp");
+    QCoreApplication::setApplicationName("DOMScalp");
+
     QObject::connect(Ui_ADMainWindow::connectButton,
                      SIGNAL(clicked()),
                      SLOT(onConnectClick()));
+
+    QObject::connect(Ui_ADMainWindow::findPaperButton,
+                     SIGNAL(clicked()),
+                     SLOT(onFindClick()));
 
     QObject::connect(&m_adConnect,
                      SIGNAL(onStateChanged(ADConnection::State)),
@@ -83,6 +123,13 @@ ADMainWindow::ADMainWindow ( const QString& login,
                       SIGNAL(timeout()),
                       SLOT(onEverySecond()) );
 
+    QSettings settings;
+    QByteArray login = XOR::decrypt(QByteArray::fromHex(settings.value("login", "").toByteArray()));
+    QByteArray passwd = XOR::decrypt(QByteArray::fromHex(settings.value("passwd", "").toByteArray()));
+    Ui_ADMainWindow::loginEdit->setText(login);
+    Ui_ADMainWindow::passwdEdit->setText(passwd);
+    Ui_ADMainWindow::findPaperEdit->setText(settings.value("paper").toString());
+
     m_everySecondTimer.start(1000);
 
     setWindowTitle(tr("AlfaDirect DOM Scalp"));
@@ -116,33 +163,44 @@ void ADMainWindow::onConnectClick ()
     if ( m_adConnect.isConnected() ) {
         Ui_ADMainWindow::connectButton->setText("Disconnecting ...");
         Ui_ADMainWindow::connectButton->setDisabled(true);
+
         m_adConnect.disconnect();
     }
     else {
+        QString login = Ui_ADMainWindow::loginEdit->text();
+        QString passwd = Ui_ADMainWindow::passwdEdit->text();
+
+        QSettings settings;
+        settings.setValue("login", XOR::encrypt(login.toAscii()).toHex());
+        settings.setValue("passwd", XOR::decrypt(passwd.toAscii()).toHex());
+
         Ui_ADMainWindow::connectButton->setText("Connecting ...");
         Ui_ADMainWindow::connectButton->setDisabled(true);
 
-        m_adConnect.connect( m_login, m_passwd );
+        m_adConnect.connect( login, passwd );
     }
 }
 
-void ADMainWindow::onConnectionStateChanged ( ADConnection::State st )
+void ADMainWindow::onFindClick ()
 {
-    if ( st == ADConnection::ConnectedState ) {
-        if ( m_papNo == 0 ) {
-            bool res = m_adConnect.findPaperNo( m_papCode, false, m_papNo );
-            if ( ! res ) {
-                qWarning("Can't find paper '%s'", qPrintable(m_papCode));
-                m_adConnect.disconnect();
-                return;
-            }
-        }
+    int paperNo = 0;
+    bool res = m_adConnect.findPaperNo(Ui_ADMainWindow::findPaperEdit->text(),
+                                       false, paperNo);
+    if ( ! res ) {
+        Ui_ADMainWindow::findResultLabel->setText("can't find paper");
+    }
+    else {
+        m_papNo = paperNo;
+        m_papCode = Ui_ADMainWindow::findPaperEdit->text();
 
-        Ui_ADMainWindow::connectButton->setText("Disconnect");
-        Ui_ADMainWindow::connectButton->setDisabled(false);
+        Ui_ADMainWindow::findResultLabel->setText("");
 
+        QSettings settings;
+        settings.setValue("paper", Ui_ADMainWindow::findPaperEdit->text());
+
+        // Subscribe
         ADConnection::Subscription::Options subscr(
-            QSet<int>() << m_papNo,
+            QSet<int>() << paperNo,
             // To be waken up
             ADConnection::Subscription::QuoteSubscription |
             ADConnection::Subscription::QueueSubscription,
@@ -159,9 +217,23 @@ void ADMainWindow::onConnectionStateChanged ( ADConnection::State st )
             return;
         }
     }
+}
+
+void ADMainWindow::onConnectionStateChanged ( ADConnection::State st )
+{
+    if ( st == ADConnection::ConnectedState ) {
+        Ui_ADMainWindow::connectButton->setText("Disconnect");
+        Ui_ADMainWindow::connectButton->setDisabled(false);
+        Ui_ADMainWindow::findPaperButton->setEnabled(true);
+        Ui_ADMainWindow::findPaperEdit->setEnabled(true);
+    }
     else {
         Ui_ADMainWindow::connectButton->setText("Connect");
         Ui_ADMainWindow::connectButton->setDisabled(false);
+        Ui_ADMainWindow::findPaperButton->setDisabled(true);
+        Ui_ADMainWindow::findPaperEdit->setDisabled(true);
+        Ui_ADMainWindow::findResultLabel->setText("");
+
         m_sub = ADConnection::Subscription();
     }
 }
@@ -364,6 +436,9 @@ void ADMainWindow::onQuoteReceived ( int paperNo,
                 Ui_ADMainWindow::sellersTableView->scrollToBottom();
             }
         }
+
+        Ui_ADMainWindow::buyersTableView->resizeColumnsToContents();
+        Ui_ADMainWindow::sellersTableView->resizeColumnsToContents();
 
         QMap<float, int>::Iterator it = q.sellers.begin();
 
