@@ -3,6 +3,12 @@ NAME
     library and consists of a single depth of market window. You can receive DOM
     of some symbol and then trade it with right or left mouse clicks.
 
+CLONE
+    After clone do not forget to init and update submodule:
+
+    $ git submodule init
+    $ git submodule update
+
 AUTHOR
     Roman Pen
 
