@@ -397,6 +397,22 @@
            </widget>
           </item>
           <item>
+           <spacer name="verticalSpacer_5">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Minimum</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>18</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
            <widget class="QLabel" name="label_2">
             <property name="font">
              <font>
@@ -421,6 +437,37 @@
               <widget class="QSpinBox" name="betterSpinBox">
                <property name="value">
                 <number>5</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_6">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Qty</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="widget_8" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="margin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QSpinBox" name="qtySpinBox">
+               <property name="value">
+                <number>1</number>
                </property>
               </widget>
              </item>
@@ -575,10 +622,32 @@
             <property name="sizeHint" stdset="0">
              <size>
               <width>20</width>
-              <height>48</height>
+              <height>40</height>
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_8">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Markets</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="marketsCombo">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QLabel" name="label_5">
@@ -669,7 +738,7 @@
             <property name="minimumSize">
              <size>
               <width>70</width>
-              <height>65</height>
+              <height>100</height>
              </size>
             </property>
             <property name="text">
@@ -691,6 +760,26 @@
            </spacer>
           </item>
          </layout>
+         <zorder>label_3</zorder>
+         <zorder>loginEdit</zorder>
+         <zorder>label_4</zorder>
+         <zorder>passwdEdit</zorder>
+         <zorder>label_2</zorder>
+         <zorder>widget_6</zorder>
+         <zorder>sellOrdersLabel</zorder>
+         <zorder>widget_5</zorder>
+         <zorder>buyOrdersLabel</zorder>
+         <zorder>label_5</zorder>
+         <zorder>widget_7</zorder>
+         <zorder>findResultLabel</zorder>
+         <zorder>label</zorder>
+         <zorder>label_6</zorder>
+         <zorder>verticalSpacer_5</zorder>
+         <zorder>betterSpinBox</zorder>
+         <zorder>widget_8</zorder>
+         <zorder>verticalSpacer</zorder>
+         <zorder>marketsCombo</zorder>
+         <zorder>label_8</zorder>
         </widget>
        </item>
       </layout>

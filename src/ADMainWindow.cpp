@@ -57,7 +57,7 @@ namespace XOR
     }
 }
 
-/***************************************************************************************/
+/******************************************************************************/
 
 ADMainWindow::ADMainWindow () :
     m_papNo(0),
@@ -80,6 +80,18 @@ ADMainWindow::ADMainWindow () :
                      SIGNAL(clicked()),
                      SLOT(onFindClick()));
 
+    QObject::connect(Ui_ADMainWindow::betterSpinBox,
+                     SIGNAL(valueChanged(int)),
+                     SLOT(onSpinValueChanged(int)));
+
+    QObject::connect(Ui_ADMainWindow::qtySpinBox,
+                     SIGNAL(valueChanged(int)),
+                     SLOT(onSpinValueChanged(int)));
+
+    QObject::connect(Ui_ADMainWindow::marketsCombo,
+                     SIGNAL(currentIndexChanged(int)),
+                     SLOT(onMarketsChange(int)));
+
     QObject::connect(&m_adConnect,
                      SIGNAL(onStateChanged(ADConnection::State)),
                      SLOT(onConnectionStateChanged(ADConnection::State)));
@@ -96,8 +108,8 @@ ADMainWindow::ADMainWindow () :
 
 
     QObject::connect(&m_adConnect,
-                     SIGNAL(onPositionChanged(QString,QString,int)),
-                     SLOT(onPositionChanged(QString,QString,int)));
+                     SIGNAL(onPositionChanged(QString,int)),
+                     SLOT(onPositionChanged(QString,int)));
 
     QObject::connect(&m_adConnect,
                      SIGNAL(onOrderStateChanged(ADConnection::Order,
@@ -128,6 +140,8 @@ ADMainWindow::ADMainWindow () :
     QByteArray passwd = XOR::decrypt(QByteArray::fromHex(settings.value("passwd", "").toByteArray()));
     Ui_ADMainWindow::loginEdit->setText(login);
     Ui_ADMainWindow::passwdEdit->setText(passwd);
+    Ui_ADMainWindow::betterSpinBox->setValue(settings.value("slippage", 5).toInt());
+    Ui_ADMainWindow::qtySpinBox->setValue(settings.value("qty", 1).toInt());
     Ui_ADMainWindow::findPaperEdit->setText(settings.value("paper").toString());
 
     m_everySecondTimer.start(1000);
@@ -184,19 +198,20 @@ void ADMainWindow::onConnectClick ()
 void ADMainWindow::onFindClick ()
 {
     int paperNo = 0;
-    bool res = m_adConnect.findPaperNo(Ui_ADMainWindow::findPaperEdit->text(),
+    bool res = m_adConnect.findPaperNo(m_market.market,
+                                       Ui_ADMainWindow::findPaperEdit->text(),
                                        false, paperNo);
     if ( ! res ) {
         Ui_ADMainWindow::findResultLabel->setText("can't find paper");
     }
     else {
         m_papNo = paperNo;
-        m_papCode = Ui_ADMainWindow::findPaperEdit->text();
 
         Ui_ADMainWindow::findResultLabel->setText("");
 
         QSettings settings;
         settings.setValue("paper", Ui_ADMainWindow::findPaperEdit->text());
+        settings.setValue("markets", Ui_ADMainWindow::marketsCombo->currentText());
 
         // Subscribe
         ADConnection::Subscription::Options subscr(
@@ -219,17 +234,43 @@ void ADMainWindow::onFindClick ()
     }
 }
 
+void ADMainWindow::onSpinValueChanged ( int )
+{
+    QSettings settings;
+    settings.setValue("slippage", Ui_ADMainWindow::betterSpinBox->value());
+    settings.setValue("qty", Ui_ADMainWindow::qtySpinBox->value());
+}
+
+void ADMainWindow::onMarketsChange ( int idx )
+{
+    QString text = Ui_ADMainWindow::marketsCombo->itemText(idx);
+    QVariant paperNo = Ui_ADMainWindow::marketsCombo->itemData(idx);
+
+    QStringList accAndMarket = text.split(", ");
+    Q_ASSERT(accAndMarket.size() == 2);
+
+    if ( ! m_adConnect.getPosition(accAndMarket[1], paperNo.toInt(), m_market) ) {
+        qWarning("Can't get position by acc '%s', paperNo '%d'",
+                 qPrintable(accAndMarket[0]),
+                 paperNo.toInt());
+        return;
+    }
+
+}
+
 void ADMainWindow::onConnectionStateChanged ( ADConnection::State st )
 {
     if ( st == ADConnection::ConnectedState ) {
         Ui_ADMainWindow::connectButton->setText("Disconnect");
         Ui_ADMainWindow::connectButton->setDisabled(false);
+        Ui_ADMainWindow::marketsCombo->setEnabled(true);
         Ui_ADMainWindow::findPaperButton->setEnabled(true);
         Ui_ADMainWindow::findPaperEdit->setEnabled(true);
     }
     else {
         Ui_ADMainWindow::connectButton->setText("Connect");
         Ui_ADMainWindow::connectButton->setDisabled(false);
+        Ui_ADMainWindow::marketsCombo->setDisabled(true);
         Ui_ADMainWindow::findPaperButton->setDisabled(true);
         Ui_ADMainWindow::findPaperEdit->setDisabled(true);
         Ui_ADMainWindow::findResultLabel->setText("");
@@ -488,20 +529,36 @@ void ADMainWindow::onHistoricalQuotesReceived ( ADConnection::Request req, QVect
 }
 
 void ADMainWindow::onPositionChanged ( QString accCode,
-                                       QString paperCode,
                                        int paperNo )
 {
-    (void)paperNo;
-
-    if ( accCode != m_accCode || paperCode != m_papCode )
-        return;
-
     ADConnection::Position pos;
-    if ( ! m_adConnect.getPosition(accCode, paperCode, pos) )
+    if ( ! m_adConnect.getPosition(accCode, paperNo, pos) ) {
+        qWarning("Can't get position by acc '%s', paperNo '%d'",
+                 qPrintable(accCode),
+                 paperNo);
         return;
+    }
 
-    Ui_ADMainWindow::posLabel_2->setText(QString("[%1]").arg(pos.qty));
-    Ui_ADMainWindow::varMarginLabel->setText(QString("%1").arg(pos.varMargin, 0, 'f', 1));
+    if ( pos.isMoney() ) {
+        QString text = pos.market + ", " + pos.accCode;
+        if ( -1 == Ui_ADMainWindow::marketsCombo->findText(text) ) {
+            Ui_ADMainWindow::marketsCombo->addItem(text, paperNo);
+        }
+
+        // Try to find text from settings
+        QSettings settings;
+        int idx = Ui_ADMainWindow::marketsCombo->findText(
+            settings.value("markets").toString());
+
+        if ( -1 != idx )
+            Ui_ADMainWindow::marketsCombo->setCurrentIndex(idx);
+    }
+    else if ( m_market.accCode == accCode && m_papNo == paperNo ) {
+        Ui_ADMainWindow::posLabel_2->
+            setText(QString("[%1]").arg(pos.qty));
+        Ui_ADMainWindow::varMarginLabel->
+            setText(QString("%1").arg(pos.varMargin, 0, 'f', 1));
+    }
 }
 
 void ADMainWindow::onOrderStateChanged ( ADConnection::Order order,
@@ -510,7 +567,8 @@ void ADMainWindow::onOrderStateChanged ( ADConnection::Order order,
 {
     (void)oldState;
 
-    if ( order.getAccountCode() != m_accCode || order.getOrderPaperCode() != m_papCode )
+    if ( order.getAccountCode() != m_market.accCode ||
+         order.getOrderPaperNo() != m_papNo )
         return;
 
     // Executed
@@ -551,13 +609,9 @@ void ADMainWindow::onOrderStateChanged ( ADConnection::Order order,
 
 void ADMainWindow::onTrade ( ADConnection::Order order, quint32 qty )
 {
-    if ( order.getAccountCode() != m_accCode || order.getOrderPaperCode() != m_papCode )
+    if ( order.getAccountCode() != m_market.accCode ||
+         order.getOrderPaperNo() != m_papNo )
         return;
-
-    //XXX
-    qWarning("order.state != Executed (%d), order.qty != qty (%d)",
-             order.getOrderState() != ADConnection::Order::ExecutedState,
-             order.getOrderQty() != qty);
 
     // Sell
     if ( order.getOrderType() == ADConnection::Order::Sell ) {
@@ -769,13 +823,12 @@ void ADMainWindow::mousePressEventADTableView ( ADTableView* view, QMouseEvent* 
         return;
     }
 
-    //XXX: TODO
-    quint32 qty = 1;
+    quint32 qty = Ui_ADMainWindow::qtySpinBox->value();
 
     ADConnection::Order order;
     ADConnection::Order::Operation op =
-        m_adConnect.tradePaper( order, m_accCode, orderType,
-                                m_papCode, qty, price );
+        m_adConnect.tradePaper( order, m_market.accCode, orderType,
+                                m_papNo, qty, price );
 }
 
-/***************************************************************************************/
+/******************************************************************************/

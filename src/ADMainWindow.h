@@ -30,9 +30,11 @@ private slots:
     void onConnectClick ();
     void onFindClick ();
     void onConnectionStateChanged ( ADConnection::State );
+    void onSpinValueChanged ( int );
+    void onMarketsChange ( int );
     void onQuoteReceived ( int paperNo, ADConnection::Subscription::Type );
     void onHistoricalQuotesReceived ( ADConnection::Request, QVector<ADConnection::HistoricalQuote> );
-    void onPositionChanged ( QString accCode, QString paperCode, int paperNo );
+    void onPositionChanged ( QString accCode, int paperNo );
     void onOrderStateChanged ( ADConnection::Order,
                                ADConnection::Order::State,
                                ADConnection::Order::State );
@@ -47,8 +49,7 @@ private:
     QStandardItemModel* m_buyersTableModel;
     ADConnection m_adConnect;
     ADConnection::Subscription m_sub;
-    QString m_accCode;
-    QString m_papCode;
+    ADConnection::Position m_market;
     int m_papNo;
     QTimer m_everySecondTimer;
     QList<ADConnection::Order> m_sellOrders;
