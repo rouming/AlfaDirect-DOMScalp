@@ -17,7 +17,7 @@
  #define TBL_BUY_IND 0
 #endif
 
-/***************************************************************************************/
+/******************************************************************************/
 
 namespace XOR
 {
@@ -101,10 +101,12 @@ ADMainWindow::ADMainWindow () :
                      SLOT(onQuoteReceived(int,ADConnection::Subscription::Type)));
 
     QObject::connect(&m_adConnect,
-                     SIGNAL(onHistoricalQuotesReceived(ADConnection::Request,
-                                                       QVector<ADConnection::HistoricalQuote>)),
-                     SLOT(onHistoricalQuotesReceived(ADConnection::Request,
-                                                     QVector<ADConnection::HistoricalQuote>)));
+                     SIGNAL(onHistoricalQuotesReceived(
+                                ADConnection::Request,
+                                QVector<ADConnection::HistoricalQuote>)),
+                     SLOT(onHistoricalQuotesReceived(
+                              ADConnection::Request,
+                              QVector<ADConnection::HistoricalQuote>)));
 
 
     QObject::connect(&m_adConnect,
@@ -112,20 +114,24 @@ ADMainWindow::ADMainWindow () :
                      SLOT(onPositionChanged(QString,int)));
 
     QObject::connect(&m_adConnect,
-                     SIGNAL(onOrderStateChanged(ADConnection::Order,
-                                                ADConnection::Order::State,
-                                                ADConnection::Order::State)),
-                     SLOT(onOrderStateChanged(ADConnection::Order,
-                                              ADConnection::Order::State,
-                                              ADConnection::Order::State)));
+                     SIGNAL(onOrderStateChanged(
+                                ADConnection::Order,
+                                ADConnection::Order::State,
+                                ADConnection::Order::State)),
+                     SLOT(onOrderStateChanged(
+                              ADConnection::Order,
+                              ADConnection::Order::State,
+                              ADConnection::Order::State)));
 
     QObject::connect(&m_adConnect,
-                     SIGNAL(onOrderOperationResult(ADConnection::Order,
-                                                   ADConnection::Order::Operation,
-                                                   ADConnection::Order::OperationResult)),
-                     SLOT(onOrderOperationResult(ADConnection::Order,
-                                                 ADConnection::Order::Operation,
-                                                 ADConnection::Order::OperationResult)));
+                     SIGNAL(onOrderOperationResult(
+                                ADConnection::Order,
+                                ADConnection::Order::Operation,
+                                ADConnection::Order::OperationResult)),
+                     SLOT(onOrderOperationResult(
+                              ADConnection::Order,
+                              ADConnection::Order::Operation,
+                              ADConnection::Order::OperationResult)));
 
     QObject::connect(&m_adConnect,
                      SIGNAL(onTrade(ADConnection::Order, quint32)),
@@ -136,8 +142,10 @@ ADMainWindow::ADMainWindow () :
                       SLOT(onEverySecond()) );
 
     QSettings settings;
-    QByteArray login = XOR::decrypt(QByteArray::fromHex(settings.value("login", "").toByteArray()));
-    QByteArray passwd = XOR::decrypt(QByteArray::fromHex(settings.value("passwd", "").toByteArray()));
+    QByteArray login = XOR::decrypt(
+        QByteArray::fromHex(settings.value("login", "").toByteArray()));
+    QByteArray passwd = XOR::decrypt(
+        QByteArray::fromHex(settings.value("passwd", "").toByteArray()));
     Ui_ADMainWindow::loginEdit->setText(login);
     Ui_ADMainWindow::passwdEdit->setText(passwd);
     Ui_ADMainWindow::betterSpinBox->setValue(settings.value("slippage", 5).toInt());
@@ -282,37 +290,122 @@ void ADMainWindow::onConnectionStateChanged ( ADConnection::State st )
 void ADMainWindow::onQuoteReceived ( int paperNo,
                                      ADConnection::Subscription::Type subType )
 {
+    if ( subType != ADConnection::Subscription::QueueSubscription ||
+         paperNo != m_papNo )
+        return;
+
     ADConnection::Quote q;
     m_adConnect.getQuote( paperNo, q );
 
-    if ( subType == ADConnection::Subscription::QueueSubscription ) {
-        if ( paperNo == m_papNo ) {
-            int rowHeight = Ui_ADMainWindow::buyersTableView->verticalHeader()->defaultSectionSize();
-            QSize viewSize = Ui_ADMainWindow::buyersTableView->size();
-            int maxRows = (viewSize.height() / rowHeight) + 5;
-            maxRows = (maxRows > 0 ? maxRows : 0);
+    int rowHeight = Ui_ADMainWindow::buyersTableView->
+        verticalHeader()->defaultSectionSize();
+    QSize viewSize = Ui_ADMainWindow::buyersTableView->size();
+    int maxRows = (viewSize.height() / rowHeight) + 5;
+    maxRows = (maxRows > 0 ? maxRows : 0);
 
-            QHash<quint64, QString> sellOrders;
-            foreach ( ADConnection::Order order, m_sellOrders ) {
-                quint64 price = static_cast<quint64>(order.getOrderPrice());
-                sellOrders[price] += "*";
+    QHash<quint64, QString> sellOrders;
+    foreach ( ADConnection::Order order, m_sellOrders ) {
+        quint64 price = static_cast<quint64>(order.getOrderPrice());
+        sellOrders[price] += "*";
+    }
+    QHash<quint64, QString> buyOrders;
+    foreach ( ADConnection::Order order, m_buyOrders ) {
+        quint64 price = static_cast<quint64>(order.getOrderPrice());
+        buyOrders[price] += "*";
+    }
+
+    // Buyers
+    {
+        int firstQty = 0;
+        float firstPrice = 0.0;
+        QMap<float, int>::Iterator it = q.buyers.end() - 1;
+        for ( int i = 0;
+              it != q.buyers.begin() - 1 && i < maxRows && q.buyers.size() > 0;
+              --it, ++i ) {
+            if ( m_buyersTableModel->rowCount() <= i )
+                m_buyersTableModel->insertRow(i, QModelIndex());
+
+            float price = it.key();
+            QString priceStr = QString("%1").arg(price);
+            int priceInt = static_cast<int>(price);
+            QString priceIntStr = QString("%1").arg(priceInt);
+            if ( priceInt < price )
+                priceIntStr = priceStr;
+            else {
+                QString str;
+                QString::ConstIterator it = priceIntStr.constEnd() - 1;
+                for ( int i = 1; it != priceIntStr.constBegin() - 1; --it, ++i ) {
+                    str = *it + str;
+                    if ( i % 3 == 0 && i != priceIntStr.length() )
+                        str = "," + str;
+                }
+                priceIntStr = str;
             }
-            QHash<quint64, QString> buyOrders;
-            foreach ( ADConnection::Order order, m_buyOrders ) {
-                quint64 price = static_cast<quint64>(order.getOrderPrice());
-                buyOrders[price] += "*";
+
+            if ( buyOrders.contains(static_cast<quint64>(price)) ) {
+                m_buyersTableModel->setData(
+                    m_buyersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
+                    buyOrders[static_cast<quint64>(price)]);
             }
+            else
+                m_buyersTableModel->setData(
+                    m_buyersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
+                    "");
 
-            // Buyers
-            {
-                int firstQty = 0;
-                float firstPrice = 0.0;
-                QMap<float, int>::Iterator it = q.buyers.end() - 1;
-                for ( int i = 0; it != q.buyers.begin() - 1 && i < maxRows && q.buyers.size() > 0;
-                      --it, ++i ) {
-                    if ( m_buyersTableModel->rowCount() <= i )
-                        m_buyersTableModel->insertRow(i, QModelIndex());
-
+            m_buyersTableModel->setData(
+                m_buyersTableModel->index(i, TBL_BUY_IND, QModelIndex()),
+                it.value());
+            m_buyersTableModel->setData(
+                m_buyersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
+                priceIntStr);
+            if ( i == 0 ) {
+                firstQty = it.value();
+                firstPrice = it.key();
+            }
+        }
+        // Check
+        if ( q.buyers.size() > 0 ) {
+            QMap<float, int>::Iterator it = q.buyers.end() - 1;
+            int qty = it.value();
+            float price = it.key();
+            if ( qty != firstQty || price != firstPrice ) {
+                int bad = 0;
+                (void)bad;
+            }
+        }
+        while ( m_buyersTableModel->rowCount() > maxRows ) {
+            m_buyersTableModel->removeRow( m_buyersTableModel->rowCount() - 1 );
+        }
+        Ui_ADMainWindow::sellersTableView->scrollToTop();
+    }
+    // Sellers
+    {
+        QMap<float, int>::Iterator it = q.sellers.end() - 1;
+        int sellersSize = q.sellers.size();
+        int lastQty = 0;
+        float lastPrice = 0.0;
+        for ( int i = 0; i < maxRows; ++i ) {
+            // View > Sellers
+            if ( maxRows > sellersSize ) {
+                if ( maxRows - sellersSize > i ) {
+                    if ( m_sellersTableModel->rowCount() <= i )
+                        m_sellersTableModel->insertRow(i, QModelIndex());
+                    else {
+                        m_sellersTableModel->setData(
+                            m_sellersTableModel->index(i, TBL_ORDER_IND,
+                                                       QModelIndex()),
+                            "");
+                        m_sellersTableModel->setData(
+                            m_sellersTableModel->index(i, TBL_SELL_IND,
+                                                       QModelIndex()),
+                            "");
+                        m_sellersTableModel->setData(
+                            m_sellersTableModel->index(i, TBL_PRICE_IND,
+                                                       QModelIndex()),
+                            "");
+                    }
+                }
+                else {
                     float price = it.key();
                     QString priceStr = QString("%1").arg(price);
                     int priceInt = static_cast<int>(price);
@@ -322,7 +415,8 @@ void ADMainWindow::onQuoteReceived ( int paperNo,
                     else {
                         QString str;
                         QString::ConstIterator it = priceIntStr.constEnd() - 1;
-                        for ( int i = 1; it != priceIntStr.constBegin() - 1; --it, ++i ) {
+                        for ( int i = 1;
+                              it != priceIntStr.constBegin() - 1; --it, ++i ) {
                             str = *it + str;
                             if ( i % 3 == 0 && i != priceIntStr.length() )
                                 str = "," + str;
@@ -330,194 +424,108 @@ void ADMainWindow::onQuoteReceived ( int paperNo,
                         priceIntStr = str;
                     }
 
-                    if ( buyOrders.contains(static_cast<quint64>(price)) ) {
-                        m_buyersTableModel->setData(m_buyersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                    buyOrders[static_cast<quint64>(price)]);
+                    if ( m_sellersTableModel->rowCount() <= i )
+                        m_sellersTableModel->insertRow(i, QModelIndex());
+
+                    if ( sellOrders.contains(static_cast<quint64>(price)) ) {
+                        m_sellersTableModel->setData(
+                            m_sellersTableModel->index(i, TBL_ORDER_IND,
+                                                       QModelIndex()),
+                            sellOrders[static_cast<quint64>(price)]);
                     }
                     else
-                        m_buyersTableModel->setData(m_buyersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                    "");
-
-                    m_buyersTableModel->setData(m_buyersTableModel->index(i, TBL_BUY_IND, QModelIndex()),
-                                                it.value());
-                    m_buyersTableModel->setData(m_buyersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
-                                                priceIntStr);
-                    if ( i == 0 ) {
-                        firstQty = it.value();
-                        firstPrice = it.key();
-                    }
+                        m_sellersTableModel->setData(
+                            m_sellersTableModel->index(i, TBL_ORDER_IND,
+                                                       QModelIndex()),
+                            "");
+                    m_sellersTableModel->setData(
+                        m_sellersTableModel->index(i, TBL_SELL_IND,
+                                                   QModelIndex()),
+                        it.value());
+                    m_sellersTableModel->setData(
+                        m_sellersTableModel->index(i, TBL_PRICE_IND,
+                                                   QModelIndex()),
+                        priceIntStr);
+                    lastQty = it.value();
+                    lastPrice = it.key();
+                    --it;
                 }
-                // Check
-                if ( q.buyers.size() > 0 ) {
-                    QMap<float, int>::Iterator it = q.buyers.end() - 1;
-                    int qty = it.value();
-                    float price = it.key();
-                    if ( qty != firstQty || price != firstPrice ) {
-                        int bad = 0;
-                        (void)bad;
-                    }
-                }
-                while ( m_buyersTableModel->rowCount() > maxRows ) {
-                    m_buyersTableModel->removeRow( m_buyersTableModel->rowCount() - 1 );
-                }
-                Ui_ADMainWindow::sellersTableView->scrollToTop();
             }
-            // Sellers
-            {
-                QMap<float, int>::Iterator it = q.sellers.end() - 1;
-                int sellersSize = q.sellers.size();
-                int lastQty = 0;
-                float lastPrice = 0.0;
-                for ( int i = 0; i < maxRows; ++i ) {
-                    // View > Sellers
-                    if ( maxRows > sellersSize ) {
-                        if ( maxRows - sellersSize > i ) {
-                            if ( m_sellersTableModel->rowCount() <= i )
-                                m_sellersTableModel->insertRow(i, QModelIndex());
-                            else {
-                                m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                             "");
-                                m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_SELL_IND, QModelIndex()),
-                                                             "");
-                                m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
-                                                             "");
-                            }
-                        }
-                        else {
-                            float price = it.key();
-                            QString priceStr = QString("%1").arg(price);
-                            int priceInt = static_cast<int>(price);
-                            QString priceIntStr = QString("%1").arg(priceInt);
-                            if ( priceInt < price )
-                                priceIntStr = priceStr;
-                            else {
-                                QString str;
-                                QString::ConstIterator it = priceIntStr.constEnd() - 1;
-                                for ( int i = 1; it != priceIntStr.constBegin() - 1; --it, ++i ) {
-                                    str = *it + str;
-                                    if ( i % 3 == 0 && i != priceIntStr.length() )
-                                        str = "," + str;
-                                }
-                                priceIntStr = str;
-                            }
+            // View <= Sellers
+            else {
+                QMap<float, int>::Iterator thisIt = it - (sellersSize - maxRows) - i;
 
-                            if ( m_sellersTableModel->rowCount() <= i )
-                                m_sellersTableModel->insertRow(i, QModelIndex());
+                if ( m_sellersTableModel->rowCount() <= i )
+                    m_sellersTableModel->insertRow(i, QModelIndex());
 
-                            if ( sellOrders.contains(static_cast<quint64>(price)) ) {
-                                m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                             sellOrders[static_cast<quint64>(price)]);
-                            }
-                            else
-                                m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                             "");
-                            m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_SELL_IND, QModelIndex()),
-                                                         it.value());
-                            m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
-                                                         priceIntStr);
-                            lastQty = it.value();
-                            lastPrice = it.key();
-                            --it;
-                        }
+                float price = thisIt.key();
+                QString priceStr = QString("%1").arg(price);
+                int priceInt = static_cast<int>(price);
+                QString priceIntStr = QString("%1").arg(priceInt);
+                if ( priceInt < price )
+                    priceIntStr = priceStr;
+                else {
+                    QString str;
+                    QString::ConstIterator it = priceIntStr.constEnd() - 1;
+                    for ( int i = 1;
+                          it != priceIntStr.constBegin() - 1; --it, ++i ) {
+                        str = *it + str;
+                        if ( i % 3 == 0 && i != priceIntStr.length() )
+                            str = "," + str;
                     }
-                    // View <= Sellers
-                    else {
-                        QMap<float, int>::Iterator thisIt = it - (sellersSize - maxRows) - i;
-
-                        if ( m_sellersTableModel->rowCount() <= i )
-                            m_sellersTableModel->insertRow(i, QModelIndex());
-
-                        float price = thisIt.key();
-                        QString priceStr = QString("%1").arg(price);
-                        int priceInt = static_cast<int>(price);
-                        QString priceIntStr = QString("%1").arg(priceInt);
-                        if ( priceInt < price )
-                            priceIntStr = priceStr;
-                        else {
-                            QString str;
-                            QString::ConstIterator it = priceIntStr.constEnd() - 1;
-                            for ( int i = 1; it != priceIntStr.constBegin() - 1; --it, ++i ) {
-                                str = *it + str;
-                                if ( i % 3 == 0 && i != priceIntStr.length() )
-                                    str = "," + str;
-                            }
-                            priceIntStr = str;
-                        }
-
-                        if ( sellOrders.contains(static_cast<quint64>(price)) ) {
-                            m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                         sellOrders[static_cast<quint64>(price)]);
-                        }
-                        else
-                            m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_ORDER_IND, QModelIndex()),
-                                                         "");
-                        m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_SELL_IND, QModelIndex()),
-                                                     thisIt.value());
-                        m_sellersTableModel->setData(m_sellersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
-                                                     priceIntStr);
-                        lastQty = thisIt.value();
-                        lastPrice = thisIt.key();
-                    }
+                    priceIntStr = str;
                 }
 
-                // Check
-                {
-                    QMap<float, int>::Iterator it = q.sellers.begin();
-                    int qty = it.value();
-                    float price = it.key();
-                    if ( qty != lastQty || price != lastPrice ) {
-                        int bad = 0;
-                        (void)bad;
-                    }
+                if ( sellOrders.contains(static_cast<quint64>(price)) ) {
+                    m_sellersTableModel->setData(
+                        m_sellersTableModel->index(i, TBL_ORDER_IND,
+                                                   QModelIndex()),
+                        sellOrders[static_cast<quint64>(price)]);
                 }
-                while ( m_sellersTableModel->rowCount() > maxRows ) {
-                    m_sellersTableModel->removeRow( m_sellersTableModel->rowCount() - 1 );
-                }
-
-                Ui_ADMainWindow::sellersTableView->scrollToBottom();
+                else
+                    m_sellersTableModel->setData(
+                        m_sellersTableModel->index(i, TBL_ORDER_IND,
+                                                   QModelIndex()),
+                        "");
+                m_sellersTableModel->setData(
+                    m_sellersTableModel->index(i, TBL_SELL_IND, QModelIndex()),
+                    thisIt.value());
+                m_sellersTableModel->setData(
+                    m_sellersTableModel->index(i, TBL_PRICE_IND, QModelIndex()),
+                    priceIntStr);
+                lastQty = thisIt.value();
+                lastPrice = thisIt.key();
             }
         }
 
-        QMap<float, int>::Iterator it = q.sellers.begin();
-
-        bool min_sellers = true;
-        bool max_sellers = true;
-        for ( int i = 0; it != q.sellers.end() && i < 3;
-              ++i, ++it ) {
-            int val = it.value();
-            if ( val > 5 )
-                min_sellers = false;
-            if ( i == 0 && val < 15 )
-                max_sellers = false;
+        // Check
+        {
+            QMap<float, int>::Iterator it = q.sellers.begin();
+            int qty = it.value();
+            float price = it.key();
+            if ( qty != lastQty || price != lastPrice ) {
+                int bad = 0;
+                (void)bad;
+            }
+        }
+        while ( m_sellersTableModel->rowCount() > maxRows ) {
+            m_sellersTableModel->removeRow( m_sellersTableModel->rowCount() - 1 );
         }
 
-        bool min_buyers = true;
-        bool max_buyers = true;
-        for ( int i = 0; q.buyers.size() != 0 && it != q.buyers.begin() -1 && i < 3;
-              ++i, --it ) {
-            int val = it.value();
-            if ( val > 5 )
-                min_buyers = false;
-            if ( i == 0 && val < 15 )
-                max_buyers = false;
-        }
-
-        if ( min_sellers && max_buyers ) {
-            //qWarning("!!!!! MIN SELLERS, MAX BUYERS, now price =%.2f\n", q.lastPrice);
-        }
-        else if ( min_buyers && max_sellers ) {
-            //qWarning("!!!!! MIN BUYERS, MAX SELLERS, now price =%.2f\n", q.lastPrice);
-        }
+        Ui_ADMainWindow::sellersTableView->scrollToBottom();
     }
 }
 
-void ADMainWindow::onHistoricalQuotesReceived ( ADConnection::Request req, QVector<ADConnection::HistoricalQuote> quotes )
+void ADMainWindow::onHistoricalQuotesReceived (
+    ADConnection::Request req,
+    QVector<ADConnection::HistoricalQuote> quotes )
 {
     qWarning("historical quotes: %d", req.requestId());
     QVector<ADConnection::HistoricalQuote>::Iterator it = quotes.begin();
     for ( ; it != quotes.end(); ++it ) {
         ADConnection::HistoricalQuote& q = *it;
-        qWarning("\tpaper=%d, open=%.2f, high=%.2f, low=%.2f, close=%.2f, volume=%.2f, dt=%s",
+        qWarning("\tpaper=%d, open=%.2f, high=%.2f, low=%.2f, "
+                 "close=%.2f, volume=%.2f, dt=%s",
                  q.paperNo,
                  q.open,
                  q.high,
@@ -573,35 +581,53 @@ void ADMainWindow::onOrderStateChanged ( ADConnection::Order order,
 
     // Executed
     if ( newState == ADConnection::Order::ExecutedState ) {
-        if ( order.getOrderType() == ADConnection::Order::Sell && -1 != m_sellOrders.indexOf(order) ) {
+        if ( order.getOrderType() == ADConnection::Order::Sell &&
+             -1 != m_sellOrders.indexOf(order) ) {
             m_sellOrders.removeAll(order);
-            Ui_ADMainWindow::sellOrdersLabel->setText(m_sellOrders.size() == 0 ? "" : QString("%1").arg(m_sellOrders.size()));
+            Ui_ADMainWindow::sellOrdersLabel->setText(
+                m_sellOrders.size() == 0 ? "" :
+                QString("%1").arg(m_sellOrders.size()));
         }
-        else if ( order.getOrderType() == ADConnection::Order::Buy && -1 != m_buyOrders.indexOf(order) ) {
+        else if ( order.getOrderType() == ADConnection::Order::Buy &&
+                  -1 != m_buyOrders.indexOf(order) ) {
             m_buyOrders.removeAll(order);
-            Ui_ADMainWindow::buyOrdersLabel->setText(m_buyOrders.size() == 0 ? "" : QString("%1").arg(m_buyOrders.size()));
+            Ui_ADMainWindow::buyOrdersLabel->setText(
+                m_buyOrders.size() == 0 ? "" :
+                QString("%1").arg(m_buyOrders.size()));
         }
     }
     // Cancelled
     else if ( newState == ADConnection::Order::CancelledState  ) {
-        if ( order.getOrderType() == ADConnection::Order::Sell && -1 != m_sellOrders.indexOf(order) ) {
+        if ( order.getOrderType() == ADConnection::Order::Sell &&
+             -1 != m_sellOrders.indexOf(order) ) {
             m_sellOrders.removeAll(order);
-            Ui_ADMainWindow::sellOrdersLabel->setText(m_sellOrders.size() == 0 ? "" : QString("%1").arg(m_sellOrders.size()));
+            Ui_ADMainWindow::sellOrdersLabel->setText(
+                m_sellOrders.size() == 0 ? "" :
+                QString("%1").arg(m_sellOrders.size()));
         }
-        else if ( order.getOrderType() == ADConnection::Order::Buy && -1 != m_buyOrders.indexOf(order) ) {
+        else if ( order.getOrderType() == ADConnection::Order::Buy &&
+                  -1 != m_buyOrders.indexOf(order) ) {
             m_buyOrders.removeAll(order);
-            Ui_ADMainWindow::buyOrdersLabel->setText(m_buyOrders.size() == 0 ? "" : QString("%1").arg(m_buyOrders.size()));
+            Ui_ADMainWindow::buyOrdersLabel->setText(
+                m_buyOrders.size() == 0 ? "" :
+                QString("%1").arg(m_buyOrders.size()));
         }
     }
     // Accepted
     else if ( newState == ADConnection::Order::AcceptedState ) {
-        if ( order.getOrderType() == ADConnection::Order::Sell && -1 == m_sellOrders.indexOf(order) ) {
+        if ( order.getOrderType() == ADConnection::Order::Sell &&
+             -1 == m_sellOrders.indexOf(order) ) {
             m_sellOrders.append(order);
-            Ui_ADMainWindow::sellOrdersLabel->setText(m_sellOrders.size() == 0 ? "" : QString("%1").arg(m_sellOrders.size()));
+            Ui_ADMainWindow::sellOrdersLabel->setText(
+                m_sellOrders.size() == 0 ? "" :
+                QString("%1").arg(m_sellOrders.size()));
         }
-        else if ( order.getOrderType() == ADConnection::Order::Buy && -1 == m_buyOrders.indexOf(order) ) {
+        else if ( order.getOrderType() == ADConnection::Order::Buy &&
+                  -1 == m_buyOrders.indexOf(order) ) {
             m_buyOrders.append(order);
-            Ui_ADMainWindow::buyOrdersLabel->setText(m_buyOrders.size() == 0 ? "" : QString("%1").arg(m_buyOrders.size()));
+            Ui_ADMainWindow::buyOrdersLabel->setText(
+                m_buyOrders.size() == 0 ? "" :
+                QString("%1").arg(m_buyOrders.size()));
         }
     }
 
@@ -697,27 +723,35 @@ void ADMainWindow::keyPressEventADTableView (  ADTableView* view, QKeyEvent* ke 
     //
     // Selection change
     //
-    if ( ke && ke->key() == Qt::Key_Up && view == Ui_ADMainWindow::buyersTableView &&
+    if ( ke && ke->key() == Qt::Key_Up &&
+         view == Ui_ADMainWindow::buyersTableView &&
          Ui_ADMainWindow::buyersTableView->selectionModel()->hasSelection() ) {
         int row = 0;
         QModelIndex firstIdx = m_buyersTableModel->index( row, 0 );
-        if ( Ui_ADMainWindow::buyersTableView->selectionModel()->isRowSelected(row, QModelIndex()) ) {
+        if ( Ui_ADMainWindow::buyersTableView->selectionModel()->
+                 isRowSelected(row, QModelIndex()) ) {
             Ui_ADMainWindow::buyersTableView->clearSelection();
-            QModelIndex lastIdx = m_sellersTableModel->index( m_sellersTableModel->rowCount() - 1, 0 );
+            QModelIndex lastIdx = m_sellersTableModel->index(
+                m_sellersTableModel->rowCount() - 1, 0 );
             Ui_ADMainWindow::sellersTableView->selectionModel()->
-                setCurrentIndex(lastIdx, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+                setCurrentIndex(lastIdx, QItemSelectionModel::SelectCurrent |
+                                         QItemSelectionModel::Rows);
             Ui_ADMainWindow::sellersTableView->setFocus( Qt::OtherFocusReason );
         }
     }
-    else if ( ke && ke->key() == Qt::Key_Down && view == Ui_ADMainWindow::sellersTableView &&
-              Ui_ADMainWindow::sellersTableView->selectionModel()->hasSelection() ) {
+    else if ( ke && ke->key() == Qt::Key_Down &&
+              view == Ui_ADMainWindow::sellersTableView &&
+              Ui_ADMainWindow::sellersTableView->selectionModel()->
+                  hasSelection() ) {
         int row = m_sellersTableModel->rowCount() - 1;
         QModelIndex lastIdx = m_sellersTableModel->index( row, 0 );
-        if ( Ui_ADMainWindow::sellersTableView->selectionModel()->isRowSelected(row, QModelIndex()) ) {
+        if ( Ui_ADMainWindow::sellersTableView->selectionModel()->
+                 isRowSelected(row, QModelIndex()) ) {
             Ui_ADMainWindow::sellersTableView->clearSelection();
             QModelIndex firstIdx = m_buyersTableModel->index( 0, 0 );
             Ui_ADMainWindow::buyersTableView->selectionModel()->
-                setCurrentIndex(firstIdx, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+                setCurrentIndex(firstIdx, QItemSelectionModel::SelectCurrent |
+                                          QItemSelectionModel::Rows);
             Ui_ADMainWindow::buyersTableView->setFocus( Qt::OtherFocusReason );
         }
     }
@@ -730,7 +764,8 @@ void ADMainWindow::keyPressEventADTableView (  ADTableView* view, QKeyEvent* ke 
     }
 }
 
-void ADMainWindow::mousePressEventADTableView ( ADTableView* view, QMouseEvent* me )
+void ADMainWindow::mousePressEventADTableView (
+    ADTableView* view, QMouseEvent* me )
 {
     if ( view == 0 || me == 0 )
         return;
@@ -751,7 +786,8 @@ void ADMainWindow::mousePressEventADTableView ( ADTableView* view, QMouseEvent* 
     QModelIndex index;
     QStandardItemModel* model = 0;
     if ( view == Ui_ADMainWindow::buyersTableView ) {
-        QModelIndex buyIndex = Ui_ADMainWindow::buyersTableView->indexAt(me->pos());
+        QModelIndex buyIndex =
+            Ui_ADMainWindow::buyersTableView->indexAt(me->pos());
         if ( ! buyIndex.isValid() )
             return;
         index = buyIndex;
@@ -759,7 +795,8 @@ void ADMainWindow::mousePressEventADTableView ( ADTableView* view, QMouseEvent* 
         model = m_buyersTableModel;
     }
     else if ( view == Ui_ADMainWindow::sellersTableView ) {
-        QModelIndex sellIndex = Ui_ADMainWindow::sellersTableView->indexAt(me->pos());
+        QModelIndex sellIndex =
+            Ui_ADMainWindow::sellersTableView->indexAt(me->pos());
         if ( ! sellIndex.isValid() )
             return;
         index = sellIndex;

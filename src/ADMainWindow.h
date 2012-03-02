@@ -33,7 +33,9 @@ private slots:
     void onSpinValueChanged ( int );
     void onMarketsChange ( int );
     void onQuoteReceived ( int paperNo, ADConnection::Subscription::Type );
-    void onHistoricalQuotesReceived ( ADConnection::Request, QVector<ADConnection::HistoricalQuote> );
+    void onHistoricalQuotesReceived (
+        ADConnection::Request,
+        QVector<ADConnection::HistoricalQuote> );
     void onPositionChanged ( QString accCode, int paperNo );
     void onOrderStateChanged ( ADConnection::Order,
                                ADConnection::Order::State,
