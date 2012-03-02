@@ -20,6 +20,7 @@ private:
     friend class ADTableView;
     void setupModel ();
     void setupViews ();
+    void refreshDOMTables ();
 
     void closeEvent ( QCloseEvent* );
     void keyPressEvent ( QKeyEvent* );
