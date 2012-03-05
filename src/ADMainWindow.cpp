@@ -321,8 +321,10 @@ void ADMainWindow::refreshDOMTables ()
     int rowHeight = Ui_ADMainWindow::buyersTableView->
         verticalHeader()->defaultSectionSize();
     QSize viewSize = Ui_ADMainWindow::buyersTableView->size();
-    // Current view plus 5
-    int maxRows = (viewSize.height() / rowHeight) + 5;
+    // Current view
+    int maxRows = (viewSize.height() / rowHeight);
+    int alignedHeight = maxRows * rowHeight;
+
     maxRows = (maxRows > 0 ? maxRows : 0);
 
     // Set order prices to map
@@ -397,9 +399,9 @@ void ADMainWindow::refreshDOMTables ()
         // Get begin index in the middle of sellers DOM
         int i = (m_sellersTableModel->rowCount() > maxSellersRows ?
                  m_sellersTableModel->rowCount() - maxSellersRows : 0);
-        // Iterate from the middle of sellers DOM and end of the sellers prices
+        // Iterate from the middle of sellers DOM and middle of the sellers prices
         // (we should get prices from hight to low, so reverse the map)
-        QMap<float, int>::Iterator it = q.sellers.end() - 1;
+        QMap<float, int>::Iterator it = q.sellers.begin() + maxSellersRows - 1;
         for ( ;  it != q.sellers.begin() - 1 && i < m_sellersTableModel->rowCount();
               --it, ++i ) {
             float price = it.key();
@@ -424,6 +426,17 @@ void ADMainWindow::refreshDOMTables ()
         // Scroll sellers DOM to bottom, because
         // sellers are closer to buyers at the end
         Ui_ADMainWindow::sellersTableView->scrollToBottom();
+
+        // Do sellers table tweaks:
+        //  sellers table view must be placed close to buyers
+        //  without any annoying padding at the end of qtableview,
+        //  if table height is not aligned to row height
+        Ui_ADMainWindow::sellersTableView->resize(
+            Ui_ADMainWindow::sellersTableView->size().width(),
+            alignedHeight );
+        Ui_ADMainWindow::sellersTableView->move(
+            Ui_ADMainWindow::sellersTableView->pos().x(),
+            Ui_ADMainWindow::buyersTableView->pos().y() - alignedHeight );
     }
 }
 
@@ -631,6 +644,11 @@ void ADMainWindow::keyPressEvent ( QKeyEvent* ke )
             m_adConnect.cancelOrder(order);
         }
     }
+}
+
+void ADMainWindow::resizeEvent ( QResizeEvent* )
+{
+    refreshDOMTables();
 }
 
 void ADMainWindow::keyPressEventADTableView (  ADTableView* view, QKeyEvent* ke )

@@ -24,6 +24,7 @@ private:
 
     void closeEvent ( QCloseEvent* );
     void keyPressEvent ( QKeyEvent* );
+    void resizeEvent ( QResizeEvent* );
     void mousePressEventADTableView ( ADTableView*, QMouseEvent* );
     void keyPressEventADTableView (  ADTableView* view, QKeyEvent* ke );
 
